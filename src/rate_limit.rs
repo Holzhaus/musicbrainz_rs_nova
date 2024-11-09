@@ -2,9 +2,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use once_cell::sync::Lazy;
-use tokio::sync::Mutex;
-use tokio::time::sleep_until;
-use tokio::time::Instant;
+use std::time::Instant;
+use async_std::sync::Mutex;
+use async_std::task::sleep;
 
 static RATE_LIMIT_NEXT_SPOT: Lazy<Arc<Mutex<Instant>>> =
     Lazy::new(|| Arc::new(Mutex::new(Instant::now())));
@@ -20,7 +20,7 @@ pub(super) async fn wait_for_ratelimit() {
 
     // Then we wait for window to come
     let deadline = *next_slot;
-    sleep_until(deadline).await;
+    sleep(deadline.saturating_duration_since(Instant::now())).await;
 
     // We set the next window to be the next second. According to MB's documentation, the user should limit itself to 1 request / second
     *next_slot = Instant::now() + Duration::from_secs(1);
